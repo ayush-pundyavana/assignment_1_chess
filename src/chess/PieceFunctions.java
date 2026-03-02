@@ -6,13 +6,8 @@ import java.util.HashMap;
 interface PieceFunctions {
     
     boolean CheckMove(int initRank, int initFile, int nextRank, int nextFile, ArrayList<ReturnPiece> pOB, Chess.Player color);
-
-    void MakeMove(int initRank, int initFile, int nextRank, int nextFile, ArrayList<ReturnPiece> pOB);
-                      
-    default void UpdateLOS() {
-        
-    }
-
+    void MakeMove(int initRank, int initFile, int nextRank, int nextFile, ArrayList<ReturnPiece> pOB);        
+    default void UpdateLOS() { }
     default ReturnPiece FindPieceAt(int r,int f, ArrayList<ReturnPiece> pOB) {
         ReturnPiece.PieceFile pf = ReturnPiece.PieceFile.values()[f];
 
@@ -36,6 +31,7 @@ interface PieceFunctions {
         return pieceIsWhite == colorIsWhite;
     }
 
+    //default good for queens, rooks, bishops
     default boolean isPathClear(int initRank, int initFile, int nextRank, int nextFile, ArrayList<ReturnPiece> pOB) {
         int stepRank = Integer.signum(nextRank - initRank);
         int stepFile = Integer.signum(nextFile - initFile);
@@ -43,6 +39,7 @@ interface PieceFunctions {
         int curFile  = initFile + stepFile;
 
         while (curRank != nextRank || curFile != nextFile) {
+            //ADD CASE WHERE WE ARE TO REMOVE OPPONENT PIECE
             if (FindPieceAt(curRank, curFile, pOB) != null) return false;
             curRank += stepRank;
             curFile += stepFile;
@@ -183,30 +180,90 @@ class Rook implements PieceFunctions {
 }
 
 class Knight implements PieceFunctions {
-    public boolean CheckMove (int initRank, int initFile, int rank, int file) {
-        if (Math.abs(rank-initRank) == 2) {
-            if (Math.abs(file-initFile) == 1) {
-                return true;
-            }
+    int file;
+    int rank;
+    Chess.Player color;
+    ArrayList<HashMap<String, Boolean>> LOS;
+    ArrayList<ReturnPiece> pOB;
+    
+    public Knight (int file, int rank, ArrayList<HashMap<String, Boolean>> LOS, ArrayList<ReturnPiece> pOB, Chess.Player color) {
+        this.file = file;
+        this.rank = rank;
+        this.color = color;
+        this.LOS = LOS;
+        this.pOB = pOB;
+    }
+    
+    public boolean CheckMove (int nextRank, int nextFile) {
+        //check for knight type of move
+        if (Math.abs(nextRank-rank) != 2 || Math.abs(nextFile-file) != 1) { return false; }
+
+        //Check for collision
+        if (FindPieceAt(nextRank, nextFile, pOB) == null) { return true; }
+
+        boolean sameColor = isSameColor(nextRank, nextFile, color, pOB);
+        
+        if (sameColor) {return false;}
+        return true;
+    }
+
+    public void MakeMove(int nextRank, int nextFile) {
+        if (CheckMove(nextRank, nextFile) == false) {return;}
+
+        //Move piece (no collision)
+        ReturnPiece temp = FindPieceAt(nextRank, nextFile, pOB);
+        ReturnPiece currPiece = FindPieceAt(rank, file, pOB);
+        if (temp == null) { 
+            
+            currPiece.pieceRank = nextRank;
+            currPiece.pieceFile = ReturnPiece.PieceFile.values()[nextFile];
         }
 
-        if (Math.abs(file-initFile) == 2) {
-            if(Math.abs(rank-initRank) == 1) {
-                return true;
-            }
-        }
-
-        return false;
+        //Move piece (collision)
+        removeAt(nextRank, nextFile, null, pOB);
+        currPiece.pieceRank = nextRank;
+        currPiece.pieceFile = ReturnPiece.PieceFile.values()[nextFile];
     }
 }
 
 class Bishop implements PieceFunctions {
-    public boolean CheckMove (int initRank, int initFile, int rank, int file) {
-        if (initRank - rank == initFile - file) {return true;}  //Lower Left Diag.}
-        if (initRank - rank == initFile + file) {return true;}  //Lower Right Diag.
-        if (initRank + rank == initFile - file) {return true;}  //Upper Left Diag.
-        if (initRank + rank == initFile + file) {return true;}  //Upper Right Diag.
-        return false;
+    int file;
+    int rank;
+    Chess.Player color;
+    ArrayList<HashMap<String, Boolean>> LOS;
+    ArrayList<ReturnPiece> pOB;
+    
+    public Bishop (int file, int rank, ArrayList<HashMap<String, Boolean>> LOS, ArrayList<ReturnPiece> pOB, Chess.Player color) {
+        this.file = file;
+        this.rank = rank;
+        this.color = color;
+        this.LOS = LOS;
+        this.pOB = pOB;
+    }
+    
+    public boolean CheckMove (int nextRank, int nextFile) {
+        //Check for calling itself
+        if (rank == nextRank && file == nextFile) {return false;}
+        if (Math.abs(nextRank - rank) != Math.abs(nextFile - file)) {return false;}
+
+        return isPathClear(rank, file, nextRank, nextFile, pOB);
+    }
+
+    public void MakeMove(int nextRank, int nextFile) {
+        if (!(CheckMove(nextRank, nextFile))) { return; }
+
+        //Move piece (no collision)
+        ReturnPiece temp = FindPieceAt(nextRank, nextFile, pOB);
+        ReturnPiece currPiece = FindPieceAt(rank, file, pOB);
+        if (temp == null) {   
+            currPiece.pieceRank = nextRank;
+            currPiece.pieceFile = ReturnPiece.PieceFile.values()[nextFile];
+        }
+
+        //Move piece (collision)
+        removeAt(nextRank, nextFile, null, pOB);
+        currPiece.pieceRank = nextRank;
+        currPiece.pieceFile = ReturnPiece.PieceFile.values()[nextFile];
     }
 }
 
