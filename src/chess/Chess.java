@@ -2,10 +2,13 @@ package chess;
 
 import java.util.ArrayList;
 
+import chess.ReturnPlay.Message;
+
 public class Chess {
 
         enum Player { white, black }
 		static ReturnPlay game = new ReturnPlay();
+		static Player player = Player.white;
    
 	/**
 	 * Plays the next move for whichever player has the turn.
@@ -19,7 +22,20 @@ public class Chess {
 	public static ReturnPlay play(String move) {
 
 		/* FILL IN THIS METHOD */
+		String mod_move = move.strip();
 
+		//Check for resignation
+		if (mod_move.substring(0,1).equals("r")) {
+			if (player == Player.white) {
+				game.message = Message.RESIGN_BLACK_WINS;
+			} else {
+				game.message = Message.RESIGN_WHITE_WINS;
+			}
+			return game;
+		}
+
+		//
+		
 
 		
 		/* FOLLOWING LINE IS A PLACEHOLDER TO MAKE COMPILER HAPPY */
@@ -27,6 +43,14 @@ public class Chess {
 		return null;
 	}
 	
+
+	//Helper method used in play()
+	public static String[] Splitter(String input) {
+		input = input.trim().replaceAll("\\s+", " ");
+		String[] words = input.split(" ");
+
+		return words;
+	}
 	
 	/**
 	 * This method should reset the game, and start from scratch.
@@ -36,8 +60,11 @@ public class Chess {
 
 		//Create a new ReturnPlay object to use in play method
 		game.piecesOnBoard = newBoard();
+		game.message = null;
+		player = Player.white;
 	}
 
+	//Helper method used in start()
 	public static ArrayList<ReturnPiece> newBoard() {
 		ArrayList<ReturnPiece> board = new ArrayList<>();
 		ReturnPiece.PieceFile[] files = ReturnPiece.PieceFile.values();
@@ -169,7 +196,8 @@ public class Chess {
 
 		return board;
 	}
-}
 
+	
+}
 
 	
