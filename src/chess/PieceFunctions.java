@@ -5,8 +5,10 @@ import java.util.HashMap;
 
 interface PieceFunctions {
     
-    boolean CheckMove();
-    void MakeMove();
+    boolean CheckMove(int initRank, int initFile, int nextRank, int nextFile, ArrayList<ReturnPiece> pOB, Chess.Player color);
+
+    void MakeMove(int initRank, int initFile, int nextRank, int nextFile, ArrayList<ReturnPiece> pOB);
+                      
     default void UpdateLOS() {
         
     }
@@ -21,6 +23,38 @@ interface PieceFunctions {
         }
         return null;
     }
+
+    default boolean canAttack(int fromRank, int fromFile, int toRank, int toFile, ArrayList<ReturnPiece> pOB, Chess.Player color) {
+        return CheckMove(fromRank, fromFile, toRank, toFile, pOB, color);
+    }
+
+    default boolean isSameColor(int rank, int file, Chess.Player color,ArrayList<ReturnPiece> pOB) {
+        ReturnPiece piece = FindPieceAt(rank, file, pOB);
+        if (piece == null) return false;
+        boolean pieceIsWhite  = piece.pieceType.name().startsWith("W");
+        boolean colorIsWhite  = (color == Chess.Player.white);
+        return pieceIsWhite == colorIsWhite;
+    }
+
+    default boolean isPathClear(int initRank, int initFile, int nextRank, int nextFile, ArrayList<ReturnPiece> pOB) {
+        int stepRank = Integer.signum(nextRank - initRank);
+        int stepFile = Integer.signum(nextFile - initFile);
+        int curRank  = initRank + stepRank;
+        int curFile  = initFile + stepFile;
+
+        while (curRank != nextRank || curFile != nextFile) {
+            if (FindPieceAt(curRank, curFile, pOB) != null) return false;
+            curRank += stepRank;
+            curFile += stepFile;
+        }
+        return true;
+    }
+
+    default void removeAt(int rank, int file, ReturnPiece exclude, ArrayList<ReturnPiece> pOB) {
+        ReturnPiece.PieceFile pf = ReturnPiece.PieceFile.values()[file];
+        pOB.removeIf(p -> p.pieceRank == rank && p.pieceFile == pf && p != exclude);
+    }
+
 }
 
 class King implements PieceFunctions {
@@ -122,10 +156,30 @@ class Queen implements PieceFunctions {
 }
 
 class Rook implements PieceFunctions {
-    public boolean CheckMove (int initRank, int initFile, int rank, int file) {
-        if (initRank==rank || initFile==file) {return true;}  //Horiz. & Vertical}
-        return false;
+    public boolean CheckMove(int initRank, int initFile, int nextRank, int nextFile,ArrayList<ReturnPiece> pOB, Chess.Player color) {
+
+        if (initRank == nextRank && initFile == nextFile) return false;
+
+
+        if (initRank != nextRank && initFile != nextFile) return false;
+
+        if (isSameColor(nextRank, nextFile, color, pOB)) return false;
+
+        // Path must be clear
+        return isPathClear(initRank, initFile, nextRank, nextFile, pOB);
     } 
+    public void MakeMove(int initRank, int initFile, int nextRank, int nextFile, ArrayList<ReturnPiece> pOB) {
+
+        ReturnPiece rook = FindPieceAt(initRank, initFile, pOB);
+        if (rook == null) return;
+
+        // Remove any captured piece at destination
+        removeAt(nextRank, nextFile, rook, pOB);
+
+        // Move the rook
+        rook.pieceRank = nextRank;
+        rook.pieceFile = ReturnPiece.PieceFile.values()[nextFile];
+    }
 }
 
 class Knight implements PieceFunctions {
