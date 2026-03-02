@@ -8,23 +8,13 @@ interface PieceFunctions {
     boolean CheckMove(int initRank, int initFile, int nextRank, int nextFile, ArrayList<ReturnPiece> pOB, Chess.Player color);
     void MakeMove(int initRank, int initFile, int nextRank, int nextFile, ArrayList<ReturnPiece> pOB);        
     default void UpdateLOS() { }
-    default ReturnPiece FindPieceAt(int r,int f, ArrayList<ReturnPiece> pOB) {
-        ReturnPiece.PieceFile pf = ReturnPiece.PieceFile.values()[f];
-
-        for (ReturnPiece rp : pOB) {
-            if (rp.pieceRank == r && rp.pieceFile == pf) {
-                return rp;
-            }
-        }
-        return null;
-    }
 
     default boolean canAttack(int fromRank, int fromFile, int toRank, int toFile, ArrayList<ReturnPiece> pOB, Chess.Player color) {
         return CheckMove(fromRank, fromFile, toRank, toFile, pOB, color);
     }
 
     default boolean isSameColor(int rank, int file, Chess.Player color,ArrayList<ReturnPiece> pOB) {
-        ReturnPiece piece = FindPieceAt(rank, file, pOB);
+        ReturnPiece piece = Chess.FindPieceAt(rank, file, pOB);
         if (piece == null) return false;
         boolean pieceIsWhite  = piece.pieceType.name().startsWith("W");
         boolean colorIsWhite  = (color == Chess.Player.white);
@@ -40,7 +30,7 @@ interface PieceFunctions {
 
         while (curRank != nextRank || curFile != nextFile) {
             //ADD CASE WHERE WE ARE TO REMOVE OPPONENT PIECE
-            if (FindPieceAt(curRank, curFile, pOB) != null) return false;
+            if (Chess.FindPieceAt(curRank, curFile, pOB) != null) return false;
             curRank += stepRank;
             curFile += stepFile;
         }
@@ -118,17 +108,17 @@ class King implements PieceFunctions {
             Chess.Player opp = Chess.Player.black;
             if (toFile == 6) {  // king-side
                 return !whiteRookHMoved
-                    && FindPieceAt(1, 5, pOB) == null
-                    && FindPieceAt(1, 6, pOB) == null
+                    && Chess.FindPieceAt(1, 5, pOB) == null
+                    && Chess.FindPieceAt(1, 6, pOB) == null
                     && !Chess.squareAttacked(1, 4, opp, pOB)
                     && !Chess.squareAttacked(1, 5, opp, pOB)
                     && !Chess.squareAttacked(1, 6, opp, pOB);
             }
             if (toFile == 2) {  // queen-side
                 return !whiteRookAMoved
-                    && FindPieceAt(1, 1, pOB) == null
-                    && FindPieceAt(1, 2, pOB) == null
-                    && FindPieceAt(1, 3, pOB) == null
+                    && Chess.FindPieceAt(1, 1, pOB) == null
+                    && Chess.FindPieceAt(1, 2, pOB) == null
+                    && Chess.FindPieceAt(1, 3, pOB) == null
                     && !Chess.squareAttacked(1, 4, opp, pOB)
                     && !Chess.squareAttacked(1, 3, opp, pOB)
                     && !Chess.squareAttacked(1, 2, opp, pOB);
@@ -138,17 +128,17 @@ class King implements PieceFunctions {
             Chess.Player opp = Chess.Player.white;
             if (toFile == 6) {
                 return !blackRookHMoved
-                    && FindPieceAt(8, 5, pOB) == null
-                    && FindPieceAt(8, 6, pOB) == null
+                    && Chess.FindPieceAt(8, 5, pOB) == null
+                    && Chess.FindPieceAt(8, 6, pOB) == null
                     && !Chess.squareAttacked(8, 4, opp, pOB)
                     && !Chess.squareAttacked(8, 5, opp, pOB)
                     && !Chess.squareAttacked(8, 6, opp, pOB);
             }
             if (toFile == 2) {
                 return !blackRookAMoved
-                    && FindPieceAt(8, 1, pOB) == null
-                    && FindPieceAt(8, 2, pOB) == null
-                    && FindPieceAt(8, 3, pOB) == null
+                    && Chess.FindPieceAt(8, 1, pOB) == null
+                    && Chess.FindPieceAt(8, 2, pOB) == null
+                    && Chess.FindPieceAt(8, 3, pOB) == null
                     && !Chess.squareAttacked(8, 4, opp, pOB)
                     && !Chess.squareAttacked(8, 3, opp, pOB)
                     && !Chess.squareAttacked(8, 2, opp, pOB);
@@ -159,16 +149,16 @@ class King implements PieceFunctions {
 
     public void MakeMove(int initRank, int initFile, int nextRank, int nextFile,
                          ArrayList<ReturnPiece> pOB) {
-        boolean white = (FindPieceAt(initRank, initFile, pOB).pieceType == ReturnPiece.PieceType.WK);
+        boolean white = (Chess.FindPieceAt(initRank, initFile, pOB).pieceType == ReturnPiece.PieceType.WK);
 
         // Slide the rook if castling
         if (Math.abs(nextFile - initFile) == 2) {
             int rank = white ? 1 : 8;
             if (nextFile == 6) {    // king-side: rook h→f
-                ReturnPiece rook = FindPieceAt(rank, 7, pOB);
+                ReturnPiece rook = Chess.FindPieceAt(rank, 7, pOB);
                 if (rook != null) rook.pieceFile = ReturnPiece.PieceFile.values()[5];
             } else {                // queen-side: rook a→d
-                ReturnPiece rook = FindPieceAt(rank, 0, pOB);
+                ReturnPiece rook = Chess.FindPieceAt(rank, 0, pOB);
                 if (rook != null) rook.pieceFile = ReturnPiece.PieceFile.values()[3];
             }
         }
@@ -178,7 +168,7 @@ class King implements PieceFunctions {
         else        blackKingMoved = true;
 
         // Move the king
-        ReturnPiece king = FindPieceAt(initRank, initFile, pOB);
+        ReturnPiece king = Chess.FindPieceAt(initRank, initFile, pOB);
         if (king == null) return;
         king.pieceRank = nextRank;
         king.pieceFile = ReturnPiece.PieceFile.values()[nextFile];
@@ -194,11 +184,6 @@ class King implements PieceFunctions {
 
 
 class Queen implements PieceFunctions {
-    
-    
-    public Queen(){}
-
-    
     
     public boolean CheckMove (int rank, int file, int nextRank, int nextFile,ArrayList<ReturnPiece> pOB, Chess.Player color ) {
         int dr = Math.abs(rank - nextRank);
@@ -223,39 +208,21 @@ class Queen implements PieceFunctions {
         
         
         //Probing for position in each line of sight
-        for (int i = 0; i < LOS.size(); i++) {
-            //Getting the move  e.g  4,5 to "d5"
-            char file_char = (char) ('a' + (nextFile-1));
-            String move = "" + file_char + ("" + nextRank);
-
-            //probing
-            if (LOS.get(i).containsKey(move)) {
-                if (LOS.get(i).get(move) == false) {
-                    return true;
-                } 
-                
-                ReturnPiece piece = FindPieceAt(nextRank, nextFile, pOB);
-                boolean isSameColor = (piece.pieceType.name().startsWith("W") && color.name().startsWith("w")) || (piece.pieceType.name().startsWith("B") && color.name().startsWith("b"));
-                boolean isDiffColor = !(isSameColor);
-                if (isSameColor) { return false; }
-                if (isDiffColor) { return true; }
-            }
-        }
-
-        //Implement isKingSafe Here:
+        if (isPathClear(rank, file, nextRank, nextFile, pOB) == false) {return false;}
 
 
-        return false;
+
+        return true;
         
         //checking
     }
 
     public void MakeMove (int rank, int file, int nextRank, int nextFile,ArrayList<ReturnPiece> pOB) {
-        ReturnPiece curr_piece = FindPieceAt(rank, file, pOB);
+        ReturnPiece curr_piece = Chess.FindPieceAt(rank, file, pOB);
         char file_char = (char) ('a' + (nextFile-1));
 
         //Not taking another piece
-        if (FindPieceAt(nextRank, nextFile, pOB) == null) {
+        if (Chess.FindPieceAt(nextRank, nextFile, pOB) == null) {
             curr_piece.pieceRank = nextRank;
             curr_piece.pieceFile = ReturnPiece.PieceFile.values()[nextFile];
         }
@@ -299,7 +266,7 @@ class Rook implements PieceFunctions {
     } 
     public void MakeMove(int initRank, int initFile, int nextRank, int nextFile, ArrayList<ReturnPiece> pOB) {
 
-        ReturnPiece rook = FindPieceAt(initRank, initFile, pOB);
+        ReturnPiece rook = Chess.FindPieceAt(initRank, initFile, pOB);
         if (rook == null) return;
 
         // Remove any captured piece at destination
@@ -333,7 +300,7 @@ class Knight implements PieceFunctions {
         if (Math.abs(nextRank-rank) != 2 || Math.abs(nextFile-file) != 1) { return false; }
 
         //Check for collision
-        if (FindPieceAt(nextRank, nextFile, pOB) == null) { return true; }
+        if (Chess.FindPieceAt(nextRank, nextFile, pOB) == null) { return true; }
 
         boolean sameColor = isSameColor(nextRank, nextFile, color, pOB);
         
@@ -345,8 +312,8 @@ class Knight implements PieceFunctions {
         if (CheckMove(rank, file, nextRank, nextFile,pOB, color) == false) {return;}
 
         //Move piece (no collision)
-        ReturnPiece temp = FindPieceAt(nextRank, nextFile, pOB);
-        ReturnPiece currPiece = FindPieceAt(rank, file, pOB);
+        ReturnPiece temp = Chess.FindPieceAt(nextRank, nextFile, pOB);
+        ReturnPiece currPiece = Chess.FindPieceAt(rank, file, pOB);
         if (temp == null) { 
             
             currPiece.pieceRank = nextRank;
@@ -389,8 +356,8 @@ class Bishop implements PieceFunctions {
         if (!(CheckMove(rank, file, nextRank, nextFile,  pOB,  color))) { return; }
 
         //Move piece (no collision)
-        ReturnPiece temp = FindPieceAt(nextRank, nextFile, pOB);
-        ReturnPiece currPiece = FindPieceAt(rank, file, pOB);
+        ReturnPiece temp = Chess.FindPieceAt(nextRank, nextFile, pOB);
+        ReturnPiece currPiece = Chess.FindPieceAt(rank, file, pOB);
         if (temp == null) {   
             currPiece.pieceRank = nextRank;
             currPiece.pieceFile = ReturnPiece.PieceFile.values()[nextFile];
@@ -438,7 +405,7 @@ class Pawn implements PieceFunctions {
         int direction = white ? 1 : -1;       // white moves up, black moves down
         int startRank = white ? 2 : 7;        // rank pawns start on
 
-        ReturnPiece target = FindPieceAt(nextRank, nextFile, pOB);
+        ReturnPiece target = Chess.FindPieceAt(nextRank, nextFile, pOB);
 
         // One step forward into empty square
         if (df == 0 && dr == direction && target == null) {
@@ -448,7 +415,7 @@ class Pawn implements PieceFunctions {
         // Two steps forward from starting rank 
         if (df == 0 && dr == 2 * direction && initRank == startRank
                 && target == null
-                && FindPieceAt(initRank + direction, initFile, pOB) == null) {
+                && Chess.FindPieceAt(initRank + direction, initFile, pOB) == null) {
             return true;
         }
 
@@ -473,7 +440,7 @@ class Pawn implements PieceFunctions {
     public void MakeMove(int initRank, int initFile, int nextRank, int nextFile,
                          ArrayList<ReturnPiece> pOB) {
 
-        ReturnPiece pawn = FindPieceAt(initRank, initFile, pOB);
+        ReturnPiece pawn = Chess.FindPieceAt(initRank, initFile, pOB);
         if (pawn == null) return;
 
         boolean white = (pawn.pieceType == ReturnPiece.PieceType.WP);

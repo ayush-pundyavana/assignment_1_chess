@@ -100,12 +100,6 @@ public class Chess {
 			return game;
 		}
 
-		//Draw is applied after move executes
-		if (drawRequested) {
-			game.message = Message.DRAW;
-			return game;
-		}
-
 		boolean inCheck = isInCheck(player, game.piecesOnBoard);
 		boolean noMoves = hasNoLegalMoves(player, game.piecesOnBoard);
 
@@ -132,17 +126,6 @@ public class Chess {
 		return words;
 	}
 
-	//Helper method used in play() -> finds piece in certain location
-	static ReturnPiece FindPieceAt(int r,int f, ArrayList<ReturnPiece> pOB) {
-        ReturnPiece.PieceFile pf = ReturnPiece.PieceFile.values()[f];
-
-        for (ReturnPiece rp : pOB) {
-            if (rp.pieceRank == r && rp.pieceFile == pf) {
-                return rp;
-            }
-        }
-        return null;
-    }
 	
 	/**
 	 * This method should reset the game, and start from scratch.
@@ -173,7 +156,7 @@ public class Chess {
 		piece.MakeMove(fromRank, fromFile, toRank, toFile, game.piecesOnBoard);
 
 		//Handle promotion after pawn has moved
-		ReturnPiece arrived = findPieceAt(toRank, toFile, game.piecesOnBoard);
+		ReturnPiece arrived = FindPieceAt(toRank, toFile, game.piecesOnBoard);
 		if (arrived != null) {
 			if (arrived.pieceType == ReturnPiece.PieceType.WP && toRank == 8) {
 				if (promoteTo != null) {
@@ -311,7 +294,7 @@ public class Chess {
 	}
 
 	//Returns the piece at (rank, file), or null if the square is empty
-	public static ReturnPiece findPieceAt(int rank, int file, ArrayList<ReturnPiece> pOB) {
+	public static ReturnPiece FindPieceAt(int rank, int file, ArrayList<ReturnPiece> pOB) {
 		ReturnPiece.PieceFile pf = ReturnPiece.PieceFile.values()[file];
 		for (ReturnPiece p : pOB) {
 			if (p.pieceRank == rank && p.pieceFile == pf) {
