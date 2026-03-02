@@ -36,9 +36,34 @@ public class Chess {
 			return game;
 		}
 
-		//
-		
+		//Takes care of draws - implements later
+		boolean drawRequested = false;
+		if (mod_move.endsWith("draw?")) {
+			drawRequested = true;
+			mod_move = mod_move.substring(0, mod_move.length() - 5).trim();
+		}
 
+		//Parse the move string into tokens
+		String[] tokens = Splitter(mod_move);
+		int fromFile = tokens[0].charAt(0) - 'a';
+		int fromRank = tokens[0].charAt(1) - '0';
+		int toFile   = tokens[1].charAt(0) - 'a';
+		int toRank   = tokens[1].charAt(1) - '0';
+
+		//Promotion check - implements later
+		ReturnPiece.PieceType promoteTo = null;
+		if (tokens.length >= 3) {
+			promoteTo = parsePromotion(tokens[2], player);   //CHECK THIS METHOD LATER
+		}
+		
+		//Find piece being moved
+		ReturnPiece mover = FindPieceAt(fromRank, fromFile, game.piecesOnBoard);
+
+		//No piece there, or piece belongs to wrong player
+		if (mover == null || isWhite(mover) != (player == Player.white)) {
+			game.message = Message.ILLEGAL_MOVE;
+			return game;
+		}
 		
 		/* FOLLOWING LINE IS A PLACEHOLDER TO MAKE COMPILER HAPPY */
 		/* WHEN YOU FILL IN THIS METHOD, YOU NEED TO RETURN A ReturnPlay OBJECT */
@@ -53,6 +78,18 @@ public class Chess {
 
 		return words;
 	}
+
+	//Helper method used in play() -> finds piece in certain location
+	static ReturnPiece FindPieceAt(int r,int f, ArrayList<ReturnPiece> pOB) {
+        ReturnPiece.PieceFile pf = ReturnPiece.PieceFile.values()[f];
+
+        for (ReturnPiece rp : pOB) {
+            if (rp.pieceRank == r && rp.pieceFile == pf) {
+                return rp;
+            }
+        }
+        return null;
+    }
 	
 	/**
 	 * This method should reset the game, and start from scratch.
@@ -199,7 +236,6 @@ public class Chess {
 		return board;
 	}
 
-	public static 
 }
 
 	
