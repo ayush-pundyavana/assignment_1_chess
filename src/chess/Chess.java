@@ -64,11 +64,64 @@ public class Chess {
 			game.message = Message.ILLEGAL_MOVE;
 			return game;
 		}
-		
-		/* FOLLOWING LINE IS A PLACEHOLDER TO MAKE COMPILER HAPPY */
-		/* WHEN YOU FILL IN THIS METHOD, YOU NEED TO RETURN A ReturnPlay OBJECT */
-		return null;
-	}
+
+		//Check geometric validity via the piece's CheckMove
+		PieceFunctions piece = pieceFor(mover);
+		if (!piece.CheckMove(fromRank, fromFile, toRank, toFile, game.piecesOnBoard, player)) {
+			game.message = Message.ILLEGAL_MOVE;
+			return game;
+		}
+
+		//Simulate move — reject if own king is left in check
+		ArrayList<ReturnPiece> snapshot = deepCopy(game.piecesOnBoard);
+		int savedEPFile = Pawn.enPassantFile;
+		int savedEPRank = Pawn.enPassantRank;
+
+		applyMove(mover, fromRank, fromFile, toRank, toFile, promoteTo);
+
+		if (isInCheck(player, game.piecesOnBoard)) {
+			//Restore board state and reject move
+			game.piecesOnBoard = snapshot;
+			Pawn.enPassantFile = savedEPFile;
+			Pawn.enPassantRank = savedEPRank;
+			game.message = Message.ILLEGAL_MOVE;
+			return game;
+		}
+
+		updateRookFlags(fromRank, fromFile);
+
+		//Switch to next player
+		Player justMoved = player;
+		player = (player == Player.white) ? Player.black : Player.white;
+
+		//Draw is applied after move executes
+		if (drawRequested) {
+			game.message = Message.DRAW;
+			return game;
+		}
+
+		//Draw is applied after move executes
+		if (drawRequested) {
+			game.message = Message.DRAW;
+			return game;
+		}
+
+		boolean inCheck = isInCheck(player, game.piecesOnBoard);
+		boolean noMoves = hasNoLegalMoves(player, game.piecesOnBoard);
+
+		if (inCheck && noMoves) {
+			if (justMoved == Player.white) {
+				game.message = Message.CHECKMATE_WHITE_WINS;
+			} else {
+				game.message = Message.CHECKMATE_BLACK_WINS;
+			}
+		} else if (inCheck) {
+			game.message = Message.CHECK;
+		} else {
+			game.message = null;
+		}
+
+		return game;	}
 	
 
 	//Helper method used in play()
@@ -98,9 +151,205 @@ public class Chess {
 		/* FILL IN THIS METHOD */
 
 		//Create a new ReturnPlay object to use in play method
+		game = new ReturnPlay();
 		game.piecesOnBoard = newBoard();
 		game.message = null;
 		player = Player.white;
+
+		King.reset();
+		Pawn.reset();
+
+	}
+
+		//Executes a move unconditionally on the live board
+	//CheckMove and in-check simulation must be done before calling this
+	private static void applyMove(ReturnPiece mover,
+								   int fromRank, int fromFile,
+								   int toRank,   int toFile,
+								   ReturnPiece.PieceType promoteTo) {
+
+		//Delegate to piece — handles captures, en passant, castling rook slide
+		PieceFunctions piece = pieceFor(mover);
+		piece.MakeMove(fromRank, fromFile, toRank, toFile, game.piecesOnBoard);
+
+		//Handle promotion after pawn has moved
+		ReturnPiece arrived = findPieceAt(toRank, toFile, game.piecesOnBoard);
+		if (arrived != null) {
+			if (arrived.pieceType == ReturnPiece.PieceType.WP && toRank == 8) {
+				if (promoteTo != null) {
+					arrived.pieceType = promoteTo;
+				} else {
+					arrived.pieceType = ReturnPiece.PieceType.WQ;
+				}
+			} else if (arrived.pieceType == ReturnPiece.PieceType.BP && toRank == 1) {
+				if (promoteTo != null) {
+					arrived.pieceType = promoteTo;
+				} else {
+					arrived.pieceType = ReturnPiece.PieceType.BQ;
+				}
+			}
+		}
+	}
+
+	//Returns true if the given player's king is currently attacked by any opponent piece
+	public static boolean isInCheck(Player player, ArrayList<ReturnPiece> pOB) {
+
+		//Find the king
+		ReturnPiece.PieceType kingType;
+		if (player == Player.white) {
+			kingType = ReturnPiece.PieceType.WK;
+		} else {
+			kingType = ReturnPiece.PieceType.BK;
+		}
+
+		ReturnPiece king = null;
+		for (ReturnPiece p : pOB) {
+			if (p.pieceType == kingType) {
+				king = p;
+				break;
+			}
+		}
+		if (king == null) { return false; }
+
+		int kingRank = king.pieceRank;
+		int kingFile = king.pieceFile.ordinal();
+
+		Player opponent;
+		if (player == Player.white) {
+			opponent = Player.black;
+		} else {
+			opponent = Player.white;
+		}
+
+		//Ask every opponent piece if it can attack the king's square
+		for (ReturnPiece p : pOB) {
+			if (isWhite(p) == (player == Player.white)) { continue; }  //skip own pieces
+			PieceFunctions pf = pieceFor(p);
+			if (pf.canAttack(p.pieceRank, p.pieceFile.ordinal(), kingRank, kingFile, pOB, opponent)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	//Returns true if (rank, file) can be attacked by any piece belonging to byPlayer
+	//Used by King.canCastle to verify castling squares are safe
+	public static boolean squareAttacked(int rank, int file,
+										  Player byPlayer,
+										  ArrayList<ReturnPiece> pOB) {
+		for (ReturnPiece p : pOB) {
+			if (isWhite(p) != (byPlayer == Player.white)) { continue; }
+			PieceFunctions pf = pieceFor(p);
+			if (pf.canAttack(p.pieceRank, p.pieceFile.ordinal(), rank, file, pOB, byPlayer)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	//Returns true if the given player has no move that keeps their king safe
+	//Used to detect checkmate (inCheck + hasNoLegalMoves)
+	private static boolean hasNoLegalMoves(Player player, ArrayList<ReturnPiece> pOB) {
+
+		for (ReturnPiece p : new ArrayList<>(pOB)) {
+			if (isWhite(p) != (player == Player.white)) { continue; }
+
+			int pf = p.pieceFile.ordinal();
+			int pr = p.pieceRank;
+
+			for (int tf = 0; tf < 8; tf++) {
+				for (int tr = 1; tr <= 8; tr++) {
+
+					//Skip if piece can't move there geometrically
+					if (!pieceFor(p).CheckMove(pr, pf, tr, tf, pOB, player)) { continue; }
+
+					//Simulate the move
+					ArrayList<ReturnPiece> snap = deepCopy(pOB);
+					int savedEPFile = Pawn.enPassantFile;
+					int savedEPRank = Pawn.enPassantRank;
+
+					ArrayList<ReturnPiece> savedBoard = game.piecesOnBoard;
+					game.piecesOnBoard = pOB;
+					applyMove(p, pr, pf, tr, tf, null);
+					boolean inCheck = isInCheck(player, pOB);
+
+					//Restore everything
+					game.piecesOnBoard = savedBoard;
+					pOB.clear();
+					pOB.addAll(snap);
+					Pawn.enPassantFile = savedEPFile;
+					Pawn.enPassantRank = savedEPRank;
+
+					//Found at least one legal move — not checkmate
+					if (!inCheck) { return false; }
+				}
+			}
+		}
+		return true;
+	}
+
+	//Strips castling rights from a rook that has moved off its starting square
+	private static void updateRookFlags(int fromRank, int fromFile) {
+		if (fromRank == 1 && fromFile == 0) { King.whiteRookAMoved = true; }
+		if (fromRank == 1 && fromFile == 7) { King.whiteRookHMoved = true; }
+		if (fromRank == 8 && fromFile == 0) { King.blackRookAMoved = true; }
+		if (fromRank == 8 && fromFile == 7) { King.blackRookHMoved = true; }
+	}
+
+	
+
+	//Parses promotion token into the correct PieceType for the current player
+	private static ReturnPiece.PieceType parsePromotion(String token, Player player) {
+		boolean w = (player == Player.white);
+		switch (token.toUpperCase()) {
+			case "Q": return w ? ReturnPiece.PieceType.WQ : ReturnPiece.PieceType.BQ;
+			case "R": return w ? ReturnPiece.PieceType.WR : ReturnPiece.PieceType.BR;
+			case "B": return w ? ReturnPiece.PieceType.WB : ReturnPiece.PieceType.BB;
+			case "N": return w ? ReturnPiece.PieceType.WN : ReturnPiece.PieceType.BN;
+			default:  return null;
+		}
+	}
+
+	//Returns the piece at (rank, file), or null if the square is empty
+	public static ReturnPiece findPieceAt(int rank, int file, ArrayList<ReturnPiece> pOB) {
+		ReturnPiece.PieceFile pf = ReturnPiece.PieceFile.values()[file];
+		for (ReturnPiece p : pOB) {
+			if (p.pieceRank == rank && p.pieceFile == pf) {
+				return p;
+			}
+		}
+		return null;
+	}
+
+	//Returns true if the piece belongs to white
+	public static boolean isWhite(ReturnPiece p) {
+		return p.pieceType.name().startsWith("W");
+	}
+
+	//Returns the right PieceFunctions implementation for a given ReturnPiece
+	public static PieceFunctions pieceFor(ReturnPiece rp) {
+		switch (rp.pieceType) {
+			case WP: case BP: return new Pawn();
+			case WR: case BR: return new Rook();
+			case WN: case BN: return new Knight();
+			case WB: case BB: return new Bishop();
+			case WQ: case BQ: return new Queen();
+			case WK: case BK: return new King();
+			default: throw new IllegalArgumentException("Unknown type: " + rp.pieceType);
+		}
+	}
+
+	//Creates an independent copy of the board for move simulation
+	private static ArrayList<ReturnPiece> deepCopy(ArrayList<ReturnPiece> src) {
+		ArrayList<ReturnPiece> copy = new ArrayList<>();
+		for (ReturnPiece p : src) {
+			ReturnPiece n = new ReturnPiece();
+			n.pieceType = p.pieceType;
+			n.pieceFile = p.pieceFile;
+			n.pieceRank = p.pieceRank;
+			copy.add(n);
+		}
+		return copy;
 	}
 
 	//Helper method used in start()  -->  for piecesOnBoard (Arraylist w/ returnable/printable pieces)
