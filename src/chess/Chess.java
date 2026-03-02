@@ -1,6 +1,7 @@
 package chess;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import chess.ReturnPlay.Message;
 
@@ -9,6 +10,7 @@ public class Chess {
         enum Player { white, black }
 		static ReturnPlay game = new ReturnPlay();
 		static Player player = Player.white;
+		static ArrayList<ArrayList<HashMap<String, Boolean>>> pieceLOS = new ArrayList<>();
    
 	/**
 	 * Plays the next move for whichever player has the turn.
@@ -64,7 +66,7 @@ public class Chess {
 		player = Player.white;
 	}
 
-	//Helper method used in start()
+	//Helper method used in start()  -->  for piecesOnBoard (Arraylist w/ returnable/printable pieces)
 	public static ArrayList<ReturnPiece> newBoard() {
 		ArrayList<ReturnPiece> board = new ArrayList<>();
 		ReturnPiece.PieceFile[] files = ReturnPiece.PieceFile.values();
@@ -197,7 +199,7 @@ public class Chess {
 		return board;
 	}
 
-	
+	public static 
 }
 
 	
