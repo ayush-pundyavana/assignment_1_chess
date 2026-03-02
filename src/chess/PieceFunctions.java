@@ -104,7 +104,17 @@ class Queen implements PieceFunctions {
         //checking
     }
 
-    public MakeMove (int nextRank, int nextFile) {
+    public void MakeMove (int nextRank, int nextFile) {
+        ReturnPiece curr_piece = FindPieceAt(rank, file, pOB);
+        char file_char = (char) ('a' + (nextFile-1));
+
+        //Not taking another piece
+        if (FindPieceAt(nextRank, nextFile, pOB) == null) {
+            curr_piece.pieceRank = nextRank;
+            curr_piece.pieceFile = ReturnPiece.PieceFile.values()[nextFile];
+        }
+
+        //Taking another piece Implementation Here:
 
     }
 
